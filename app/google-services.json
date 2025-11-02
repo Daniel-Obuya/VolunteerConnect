@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "474581811751",
+    "project_id": "volunteer-app-4eccd",
+    "storage_bucket": "volunteer-app-4eccd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:474581811751:android:22fe6b3f1884198be04402",
+        "android_client_info": {
+          "package_name": "com.example.volunteerapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD-vyl2C5NpSwsj1LUUipGqBotinRiPp38"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

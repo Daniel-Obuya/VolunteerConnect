@@ -3,26 +3,52 @@ package com.example.volunteerapp
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import com.example.volunteerapp.auth.LoginScreen // 👈 **1. Add this import**
+import com.example.volunteerapp.auth.ProfileScreen // 👈 **2. Add this import**
+import com.example.volunteerapp.auth.RegisterScreen
 import com.example.volunteerapp.ui.theme.VolunteerAppTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
             VolunteerAppTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
+
+                var currentScreen by remember { mutableStateOf("login") }
+                var userRole by remember { mutableStateOf("") }
+
+                when (currentScreen) {
+
+                    // 🔹 LOGIN SCREEN
+                    "login" -> LoginScreen( // 👈 **3. Corrected function call**
+                        onLoginSuccess = { role ->
+                            userRole = role
+                            currentScreen = "profile"
+                        },
+                        onNavigateToRegister = {
+                            currentScreen = "register"
+                        }
+                    )
+
+                    // 🔹 REGISTER SCREEN (This one was already correct)
+                    "register" -> RegisterScreen(
+                        onRegisterSuccess = {
+                            // Let's navigate to login to force the user to sign in
+                            currentScreen = "login"
+                        },
+                        onNavigateToLogin = {
+                            currentScreen = "login"
+                        }
+                    )
+
+                    // 🔹 PROFILE SCREEN
+                    "profile" -> ProfileScreen( // 👈 **4. Corrected function call**
+                        onLogout = {
+                            currentScreen = "login"
+                        }
                     )
                 }
             }
@@ -30,18 +56,3 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    VolunteerAppTheme {
-        Greeting("Android")
-    }
-}
