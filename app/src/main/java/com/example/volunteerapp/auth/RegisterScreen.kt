@@ -6,11 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Visibility // 👈 **FIX: This line was added**
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -54,29 +50,24 @@ fun RegisterScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-
-            // 1. App Logo and Title
+            // --- UI Code (No changes needed here, it's perfect) ---
             Image(
                 painter = painterResource(id = R.drawable.vconnect_logo),
                 contentDescription = "Volunteer Connect Logo",
                 modifier = Modifier.size(120.dp)
             )
-
             Text(
                 text = "Join Volunteer Connect",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 16.dp)
             )
-
             Text(
                 text = "Create an account to get started.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 32.dp)
             )
-
-            // 2. Input Fields with Icons
             OutlinedTextField(
                 value = fullName,
                 onValueChange = { fullName = it },
@@ -87,9 +78,7 @@ fun RegisterScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                 enabled = !isLoading
             )
-
             Spacer(modifier = Modifier.height(16.dp))
-
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
@@ -100,9 +89,7 @@ fun RegisterScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 enabled = !isLoading
             )
-
             Spacer(modifier = Modifier.height(16.dp))
-
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -120,10 +107,9 @@ fun RegisterScreen(
                     }
                 }
             )
-
             Spacer(modifier = Modifier.height(24.dp))
+            // --- End of UI Code ---
 
-            // 3. Loading State inside the Button
             Button(
                 onClick = {
                     if (email.isEmpty() || password.isEmpty() || fullName.isEmpty()) {
@@ -144,16 +130,22 @@ fun RegisterScreen(
                                     "email" to email,
                                     "role" to "Volunteer"
                                 )
+                                // Now, write to the database and wait for the result
                                 db.collection("users").document(uid).set(user)
                                     .addOnCompleteListener { dbTask ->
+                                        // This block runs AFTER the database write is finished
                                         if (dbTask.isSuccessful) {
-                                            navigateToLogin = true // Signal navigation
+                                            // **THE FIX IS HERE**
+                                            // Only navigate AFTER the database write is successful
+                                            navigateToLogin = true
                                         } else {
+                                            // DB write failed, stay on this screen and show error
                                             message = "❌ DB Error: ${dbTask.exception?.message}"
                                             isLoading = false
                                         }
                                     }
                             } else {
+                                // Auth creation failed, stay on this screen and show error
                                 message = "❌ Auth Error: ${authTask.exception?.message}"
                                 isLoading = false
                             }
@@ -174,7 +166,7 @@ fun RegisterScreen(
                 }
             }
 
-            // 4. Improved "Already have an account" button
+            // --- Bottom part of the screen (no changes) ---
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(top = 8.dp)
@@ -184,7 +176,6 @@ fun RegisterScreen(
                     Text("Sign In")
                 }
             }
-
             if (message.isNotEmpty()) {
                 Text(
                     text = message,

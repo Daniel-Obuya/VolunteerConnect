@@ -6,10 +6,11 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import com.example.volunteerapp.auth.LoginScreen // 👈 **1. Add this import**
-import com.example.volunteerapp.auth.ProfileScreen // 👈 **2. Add this import**
+import com.example.volunteerapp.auth.LoginScreen
+import com.example.volunteerapp.auth.ProfileScreen
 import com.example.volunteerapp.auth.RegisterScreen
 import com.example.volunteerapp.ui.theme.VolunteerAppTheme
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -17,15 +18,23 @@ class MainActivity : ComponentActivity() {
         setContent {
             VolunteerAppTheme {
 
-                var currentScreen by remember { mutableStateOf("login") }
-                var userRole by remember { mutableStateOf("") }
+                var currentScreen by remember { mutableStateOf<String>("login") }
+                // 🔹 Store the current User's ID
+                var currentUserId by remember { mutableStateOf<String?>(null) }
+
+                // Check if user is already logged in on app start
+                LaunchedEffect(Unit) {
+                    if (FirebaseAuth.getInstance().currentUser != null) {
+                        currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+                        currentScreen = "profile"
+                    }
+                }
 
                 when (currentScreen) {
-
-                    // 🔹 LOGIN SCREEN
-                    "login" -> LoginScreen( // 👈 **3. Corrected function call**
-                        onLoginSuccess = { role ->
-                            userRole = role
+                    "login" -> LoginScreen(
+                        // 🔹 Pass the UID and role on success
+                        onLoginSuccess = { uid, role ->
+                            currentUserId = uid
                             currentScreen = "profile"
                         },
                         onNavigateToRegister = {
@@ -33,10 +42,8 @@ class MainActivity : ComponentActivity() {
                         }
                     )
 
-                    // 🔹 REGISTER SCREEN (This one was already correct)
                     "register" -> RegisterScreen(
                         onRegisterSuccess = {
-                            // Let's navigate to login to force the user to sign in
                             currentScreen = "login"
                         },
                         onNavigateToLogin = {
@@ -44,15 +51,20 @@ class MainActivity : ComponentActivity() {
                         }
                     )
 
-                    // 🔹 PROFILE SCREEN
-                    "profile" -> ProfileScreen( // 👈 **4. Corrected function call**
-                        onLogout = {
-                            currentScreen = "login"
+                    "profile" -> {
+                        // 🔹 Guard against null ID and pass it to the ProfileScreen
+                        currentUserId?.let { uid ->
+                            ProfileScreen(
+                                userId = uid, // Pass the UID
+                                onLogout = {
+                                    currentUserId = null
+                                    currentScreen = "login"
+                                }
+                            )
                         }
-                    )
+                    }
                 }
             }
         }
     }
 }
-

@@ -26,12 +26,12 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.volunteerapp.R // Import to access drawable resources
+import com.example.volunteerapp.R
 import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: (String) -> Unit,
+    onLoginSuccess: (uid: String, role: String) -> Unit,
     onNavigateToRegister: () -> Unit
 ) {
     val context = LocalContext.current
@@ -48,14 +48,11 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 24.dp)
-                .verticalScroll(rememberScrollState()), // Makes screen scrollable
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-
-            // 1. App Logo and Title
             Image(
-                // Use the vconnect_logo.png from your drawable folder
                 painter = painterResource(id = R.drawable.vconnect_logo),
                 contentDescription = "Volunteer Connect Logo",
                 modifier = Modifier.size(120.dp)
@@ -75,7 +72,6 @@ fun LoginScreen(
                 modifier = Modifier.padding(bottom = 32.dp)
             )
 
-            // 2. Input Fields with Icons
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
@@ -109,7 +105,6 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 3. Loading State inside the Button
             Button(
                 onClick = {
                     if (email.isEmpty() || password.isEmpty()) {
@@ -120,12 +115,19 @@ fun LoginScreen(
                     message = ""
 
                     auth.signInWithEmailAndPassword(email, password)
-                        .addOnSuccessListener {
-                            // In a real app, you'd fetch the role from Firestore here
-                            // For now, we'll just assume "Volunteer"
-                            isLoading = false
-                            Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
-                            onLoginSuccess("Volunteer") // Pass role to MainActivity
+                        .addOnSuccessListener { authResult ->
+                            val user = authResult.user
+                            if (user != null) {
+                                // In a real app, you'd fetch the role from Firestore here
+                                isLoading = false
+                                Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
+                                // FIX: Pass the user's UID and a default role
+                                onLoginSuccess(user.uid, "Volunteer")
+                            } else {
+                                // Handle rare case where user is null after success
+                                message = "Login failed: User not found."
+                                isLoading = false
+                            }
                         }
                         .addOnFailureListener { e ->
                             message = "Login failed: ${e.message}"
@@ -147,7 +149,6 @@ fun LoginScreen(
                 }
             }
 
-            // 4. Improved "Don't have an account" button
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(top = 8.dp)
