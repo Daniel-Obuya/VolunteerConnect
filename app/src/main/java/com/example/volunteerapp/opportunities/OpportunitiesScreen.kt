@@ -23,7 +23,7 @@ fun OpportunitiesScreen(
     var events by remember { mutableStateOf<List<Event>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // --- Fetch events dynamically from Firebase ---
+    // --- Fetch events dynamically from Firebaseee ---
     LaunchedEffect(Unit) {
         db.collection("events")
             .addSnapshotListener { snapshot, e ->

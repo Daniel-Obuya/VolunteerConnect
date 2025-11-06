@@ -87,7 +87,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     "admin_dashboard" -> {
-                        // This is a placeholder for your AdminDashboardScreen
+                        // This is a placeeholder for your AdminDashboardScreen
                         // You would put your AdminDashboardScreen composable call here
                     }
                 }

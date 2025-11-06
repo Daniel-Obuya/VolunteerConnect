@@ -60,7 +60,7 @@ fun ProfileScreen(
     var selectedTabIndex by remember { mutableStateOf(0) }
     val tabs = listOf("My Details", "My Events")
 
-    // --- Data Fetching ---
+    // --- Data Fetchingg ---
     LaunchedEffect(userId) {
         // Fetch User Details
         db.collection("users").document(userId).get()
