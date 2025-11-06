@@ -12,6 +12,8 @@ import com.example.volunteerapp.auth.RegisterScreen
 import com.example.volunteerapp.ui.theme.VolunteerAppTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.example.volunteerapp.opportunities.OpportunitiesScreen
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,11 +76,15 @@ class MainActivity : ComponentActivity() {
                                     currentScreen = "login"
                                 },
                                 onNavigateToOpportunities = {
-                                    // This is a placeholder for when you build the opportunities screen
-                                    // currentScreen = "opportunities_list"
+                                    currentScreen = "opportunities_list"
                                 }
                             )
                         }
+                    }
+                    "opportunities_list" -> {
+                        com.example.volunteerapp.opportunities.OpportunitiesScreen(
+                            onBackToProfile = { currentScreen = "profile" }
+                        )
                     }
                     "admin_dashboard" -> {
                         // This is a placeholder for your AdminDashboardScreen
