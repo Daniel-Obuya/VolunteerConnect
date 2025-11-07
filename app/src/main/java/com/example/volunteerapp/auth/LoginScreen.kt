@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.volunteerapp.R
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore // Import Firestore
 
 @Composable
 fun LoginScreen(
@@ -36,6 +37,7 @@ fun LoginScreen(
 ) {
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance() // Get Firestore instance
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -50,13 +52,16 @@ fun LoginScreen(
                 .padding(horizontal = 24.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            // Change arrangement to place the header at the top
+            verticalArrangement = Arrangement.Top
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.vconnect_logo),
-                contentDescription = "Volunteer Connect Logo",
-                modifier = Modifier.size(120.dp)
-            )
+            // --- NEW: Add the App Header here ---
+            VConnectHeader()
+
+            // Add some space for visual separation
+            Spacer(modifier = Modifier.height(48.dp))
+
+            // The old, large Image is now removed and replaced by the AppHeader above.
 
             Text(
                 text = "Welcome Back!",
@@ -118,13 +123,22 @@ fun LoginScreen(
                         .addOnSuccessListener { authResult ->
                             val user = authResult.user
                             if (user != null) {
-                                // In a real app, you'd fetch the role from Firestore here
-                                isLoading = false
-                                Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
-                                // FIX: Pass the user's UID and a default role
-                                onLoginSuccess(user.uid, "Volunteer")
+                                // --- MODIFIED: Fetch role from Firestore ---
+                                db.collection("users").document(user.uid).get()
+                                    .addOnSuccessListener { document ->
+                                        val role = document.getString("role") ?: "Volunteer"
+                                        isLoading = false
+                                        Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
+                                        // Pass the REAL role from Firestore
+                                        onLoginSuccess(user.uid, role)
+                                    }
+                                    .addOnFailureListener {
+                                        // If fetching role fails, default to Volunteer and show a warning
+                                        isLoading = false
+                                        Toast.makeText(context, "Could not verify role, logging in as Volunteer.", Toast.LENGTH_LONG).show()
+                                        onLoginSuccess(user.uid, "Volunteer")
+                                    }
                             } else {
-                                // Handle rare case where user is null after success
                                 message = "Login failed: User not found."
                                 isLoading = false
                             }
@@ -168,5 +182,35 @@ fun LoginScreen(
                 )
             }
         }
+    }
+}
+
+/**
+ * A reusable composable for the app's header, displaying the logo and name.
+ */
+@Composable
+fun VConnectHeader() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 32.dp, bottom = 16.dp), // Give it some space from the status bar
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        // Your App Logo
+        Image(
+            painter = painterResource(id = R.drawable.vconnect_logo), // Make sure this resource name is correct
+            contentDescription = "App Logo",
+            modifier = Modifier.size(40.dp) // Adjust size as needed
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // Your App Name
+        Text(
+            text = "VConnect", // Your App Name
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
     }
 }

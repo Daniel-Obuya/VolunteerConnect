@@ -1,3 +1,4 @@
+
 [versions]
 agp = "8.12.3"
 kotlin = "2.0.21"
@@ -12,6 +13,10 @@ firebaseAuth = "24.0.1"
 credentials = "1.5.0"
 credentialsPlayServicesAuth = "1.5.0"
 googleid = "1.1.1"
+# --- ADDED VERSIONS ---
+googleGmsServices = "4.4.2" # Version for the google-services plugin
+firebaseBom = "33.1.2"      # Version for the Firebase Bill of Materials
+coil = "2.6.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -33,8 +38,18 @@ androidx-credentials = { group = "androidx.credentials", name = "credentials", v
 androidx-credentials-play-services-auth = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentialsPlayServicesAuth" }
 googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
 
+# --- ADDED LIBRARIES ---
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" } # No version needed, managed by BOM
+firebase-firestore-ktx = { group = "com.google.firebase", name = "firebase-firestore-ktx" } # No version needed
+firebase-storage = { group = "com.google.firebase", name = "firebase-storage" } # No version needed
+firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" } # No version needed
+
+coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-
+# --- ADDED PLUGIN ---
+google-gms-google-services = { id = "com.google.gms.google-services", version.ref = "googleGmsServices" }

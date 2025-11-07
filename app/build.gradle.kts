@@ -1,13 +1,16 @@
+
+
 plugins {
+    // Use the alias syntax consistently for all plugins
+    alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.android.application")
-    id("com.google.gms.google-services")
+    alias(libs.plugins.google.gms.google.services)
 }
 
 android {
     namespace = "com.example.volunteerapp"
-    compileSdk = 36
+    compileSdk = 36 // A stable SDK version
 
     defaultConfig {
         applicationId = "com.example.volunteerapp"
@@ -17,6 +20,9 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables {
+            useSupportLibrary = true
+        }
     }
 
     buildTypes {
@@ -29,19 +35,26 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "1.8"
     }
     buildFeatures {
         compose = true
     }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.1" // Adjust if needed based on your Kotlin version
+    }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -50,9 +63,24 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+
+    // Firebase - Using the BOM (Bill of Materials) from your libs.versions.toml
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.firestore.ktx) // For the .toObject<T>() extension
+    implementation(libs.firebase.storage)
+
+    // Other libraries from your catalog
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
+
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation(libs.coil.compose)
+
+    // Test Dependencies
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -60,17 +88,4 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-    implementation(platform("com.google.firebase:firebase-bom:34.4.0"))
-    implementation("com.google.firebase:firebase-analytics")
-    implementation("com.google.firebase:firebase-auth")           // ✅ For login/signup
-    implementation("com.google.firebase:firebase-firestore")       // ✅ For user data
-    implementation("com.google.firebase:firebase-storage")
-    implementation("androidx.navigation:navigation-compose:2.8.0")
-    implementation("androidx.compose.material:material-icons-extended")
-
-
-    // ✅ For profile pictures
-    // Option 1: Coil (works great with Compose)
-    implementation("io.coil-kt:coil-compose:2.4.0")
-
 }
