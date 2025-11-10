@@ -1,5 +1,3 @@
-
-
 plugins {
     // Use the alias syntax consistently for all plugins
     alias(libs.plugins.android.application)
@@ -15,7 +13,7 @@ android {
     defaultConfig {
         applicationId = "com.example.volunteerapp"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
@@ -41,9 +39,15 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+
+    // --- START: Crucial additions for View System/Data Binding ---
     buildFeatures {
         compose = true
+        // Enabling View Binding to resolve ActivityAdminDashboardBinding errors
+        viewBinding = true
     }
+    // --- END: Crucial additions ---
+
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1" // Adjust if needed based on your Kotlin version
     }
@@ -55,6 +59,7 @@ android {
 }
 
 dependencies {
+    // AndroidX Core and Compose dependencies (Existing)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -64,23 +69,26 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
 
-    // Firebase - Using the BOM (Bill of Materials) from your libs.versions.toml
+
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.recyclerview)
+
+
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
-    implementation(libs.firebase.firestore.ktx) // For the .toObject<T>() extension
+    implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.storage)
 
-    // Other libraries from your catalog
+    // Other libraries (Existing)
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
-
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation(libs.androidx.material3.icons.extended)
     implementation(libs.coil.compose)
 
-    // Test Dependencies
+    // Test Dependencies (Existing)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

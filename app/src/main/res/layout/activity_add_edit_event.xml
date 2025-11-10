@@ -1,0 +1,27 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:padding="16dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <EditText android:id="@+id/edtTitle" android:hint="Event Title"
+            android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/edtDescription" android:hint="Description"
+            android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/edtDate" android:hint="Date"
+            android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/edtTime" android:hint="Time"
+            android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <EditText android:id="@+id/edtLocation" android:hint="Location"
+            android:layout_width="match_parent" android:layout_height="wrap_content"/>
+
+        <Button android:id="@+id/btnSave" android:text="Save"
+            android:layout_width="match_parent" android:layout_height="wrap_content"/>
+        <Button android:id="@+id/btnDelete" android:text="Delete"
+            android:layout_width="match_parent" android:layout_height="wrap_content"/>
+    </LinearLayout>
+</ScrollView>

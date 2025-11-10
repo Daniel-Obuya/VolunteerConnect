@@ -124,7 +124,6 @@ fun EventItem(event: Event, userId: String) {
             Text(text = event.description, style = MaterialTheme.typography.bodyMedium)
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = "Date: ${event.date}")
-            Text(text = "Time: ${event.time}")
             Text(text = "Location: ${event.location}")
             Spacer(modifier = Modifier.height(16.dp))
 

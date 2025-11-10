@@ -1,136 +1,264 @@
 package com.example.volunteerapp.auth
 
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Event
-import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.volunteerapp.model.Event
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.example.volunteerapp.R
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ktx.toObject
+import com.google.firebase.storage.FirebaseStorage
+
+// A simple data class for holding opportunity details
+data class VolunteerOpportunity(
+    val id: String = "",
+    val title: String = "",
+    val date: String = "", // Keep it simple for now
+    val location: String = ""
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     userId: String,
     onLogout: () -> Unit,
-    onNavigateToOpportunities: () -> Unit // This comes from MainActivity
+    onNavigateToOpportunities: () -> Unit // Navigation callback
 ) {
-    var user by remember { mutableStateOf<User?>(null) }
-    var signedUpEvents by remember { mutableStateOf<List<Event>>(emptyList()) }
     val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
 
-    // Fetch user data and their signed-up events
+    // --- State Management ---
+    var userName by remember { mutableStateOf("Loading...") }
+    var userEmail by remember { mutableStateOf("Loading...") }
+    var userPhotoUrl by remember { mutableStateOf<String?>(null) }
+    var registeredOpportunities by remember { mutableStateOf<List<VolunteerOpportunity>>(emptyList()) }
+    var isLoadingEvents by remember { mutableStateOf(true) }
+
+    // --- Tab State ---
+    var selectedTabIndex by remember { mutableStateOf(0) }
+    val tabs = listOf("My Details", "My Events")
+
+    // --- Data Fetching ---
     LaunchedEffect(userId) {
-        // Fetch user details
+        // Fetch User Details
         db.collection("users").document(userId).get()
             .addOnSuccessListener { document ->
-                user = document.toObject<User>()
-            }
-            .addOnFailureListener {
-                Toast.makeText(context, "Failed to load profile.", Toast.LENGTH_SHORT).show()
-            }
-
-        // Fetch events the user has signed up for
-        db.collectionGroup("signups").whereEqualTo("userId", userId).get()
-            .addOnSuccessListener { signupSnapshot ->
-                val eventIds = signupSnapshot.documents.map { it.reference.parent.parent?.id }
-                if (eventIds.isNotEmpty()) {
-                    db.collection("events").whereIn("id", eventIds).get()
-                        .addOnSuccessListener { eventSnapshot ->
-                            signedUpEvents = eventSnapshot.toObjects(Event::class.java)
-                        }
+                if (document != null && document.exists()) {
+                    userName = document.getString("name") ?: "No Name"
+                    userEmail = document.getString("email") ?: "No Email"
+                    userPhotoUrl = document.getString("photoUrl")
                 }
             }
+
+        // Fetch Registered Opportunities
+        isLoadingEvents = true
+        db.collectionGroup("signups").whereEqualTo("userId", userId).get()
+            .addOnSuccessListener { snapshot ->
+                val opportunityIds = snapshot.documents.map { it.reference.parent.parent?.id }
+                if (opportunityIds.isNotEmpty()) {
+                    db.collection("opportunities").whereIn("id", opportunityIds).get()
+                        .addOnSuccessListener { opportunityDocs ->
+                            registeredOpportunities = opportunityDocs.toObjects(VolunteerOpportunity::class.java)
+                            isLoadingEvents = false
+                        }.addOnFailureListener { isLoadingEvents = false }
+                } else {
+                    isLoadingEvents = false
+                }
+            }.addOnFailureListener { isLoadingEvents = false }
     }
 
-    // --- UI with Scaffold and FAB ---
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("My Profile") },
                 actions = {
-                    IconButton(onClick = onLogout) {
+                    IconButton(onClick = {
+                        FirebaseAuth.getInstance().signOut()
+                        onLogout()
+                    }) {
                         Icon(Icons.Default.ExitToApp, contentDescription = "Logout")
                     }
                 }
             )
         },
-        // --- THIS IS THE KEY ADDITION ---
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 text = { Text("Find Opportunities") },
-                icon = { Icon(Icons.Default.Event, contentDescription = "Find Opportunities") },
-                onClick = onNavigateToOpportunities // This triggers the navigation
+                icon = { Icon(Icons.Default.Search, contentDescription = null) },
+                onClick = onNavigateToOpportunities // Navigate to the main list
             )
-        },
-        floatingActionButtonPosition = FabPosition.Center
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            user?.let {
-                Text(it.name, style = MaterialTheme.typography.headlineMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(it.email, style = MaterialTheme.typography.bodyLarge)
-                Spacer(modifier = Modifier.height(24.dp))
+        }
+    ) { paddingValues ->
+        Column(modifier = Modifier.padding(paddingValues)) {
+            // --- Tab Layout ---
+            PrimaryTabRow(selectedTabIndex = selectedTabIndex) {
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTabIndex == index,
+                        onClick = { selectedTabIndex = index },
+                        text = { Text(title) }
+                    )
+                }
             }
 
-            Text(
-                "My Registered Events",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (signedUpEvents.isEmpty()) {
-                Text("You haven't signed up for any events yet.")
-            } else {
-                LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                    items(signedUpEvents) { event ->
-                        EventHistoryCard(event)
-                    }
-                }
+            // --- Content based on selected tab ---
+            when (selectedTabIndex) {
+                0 -> MyDetailsTab(userId, userName, userEmail, userPhotoUrl)
+                1 -> MyEventsTab(registeredOpportunities, isLoadingEvents)
             }
         }
     }
 }
 
 @Composable
-fun EventHistoryCard(event: Event) {
-    Card(
+fun MyDetailsTab(
+    userId: String,
+    initialName: String,
+    email: String,
+    photoUrl: String?
+) {
+    val context = LocalContext.current
+    val db = FirebaseFirestore.getInstance()
+    val storage = FirebaseStorage.getInstance()
+
+    // Edit mode states
+    var isEditMode by remember { mutableStateOf(false) }
+    var editableName by remember(initialName) { mutableStateOf(initialName) }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var isSaving by remember { mutableStateOf(false) }
+
+    // Derived states for display
+    val currentName by remember(initialName, editableName, isEditMode) { derivedStateOf { if (isEditMode) editableName else initialName } }
+    val currentPhoto by remember(photoUrl, selectedImageUri) { derivedStateOf { selectedImageUri ?: photoUrl } }
+
+
+    Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Text(event.title, style = MaterialTheme.typography.titleMedium)
-            Text("Date: ${event.date}", style = MaterialTheme.typography.bodySmall)
-            Text("Location: ${event.location}", style = MaterialTheme.typography.bodySmall)
+        if (isSaving) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        // --- Profile Picture Section ---
+        Box(contentAlignment = Alignment.BottomEnd) {
+            AsyncImage(
+                model = currentPhoto ?: R.drawable.vconnect_logo,
+                contentDescription = "Profile Picture",
+                modifier = Modifier
+                    .size(150.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable(enabled = isEditMode) {
+                        // Image picker logic here
+                    },
+                contentScale = ContentScale.Crop
+            )
+            if (isEditMode) {
+                Icon(
+                    imageVector = Icons.Default.CameraAlt,
+                    contentDescription = "Change Photo",
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                        .padding(8.dp),
+                    tint = Color.White
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // --- User Details Section ---
+        if (isEditMode) {
+            OutlinedTextField(
+                value = editableName,
+                onValueChange = { editableName = it },
+                label = { Text("Full Name") },
+                modifier = Modifier.fillMaxWidth()
+            )
+        } else {
+            Text(text = currentName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(text = email, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        Spacer(modifier = Modifier.weight(1f)) // Pushes button to bottom
+
+        // --- Edit/Save Button ---
+        Button(
+            onClick = {
+                if (isEditMode) {
+                    // Save logic
+                    isSaving = true
+                    // (Add the full save logic from the previous answer here)
+                    Toast.makeText(context, "Saving...", Toast.LENGTH_SHORT).show()
+                    // Simulate save and exit edit mode
+                    isSaving = false
+                    isEditMode = false
+                } else {
+                    isEditMode = true
+                }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(if (isEditMode) "Save Changes" else "Edit Details")
         }
     }
 }
 
-// Make sure you have this User data class defined, probably in a 'model' package
-data class User(
-    val name: String = "",
-    val email: String = "",
-    val role: String = "Volunteer"
-)
+@Composable
+fun MyEventsTab(opportunities: List<VolunteerOpportunity>, isLoading: Boolean) {
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+    } else if (opportunities.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+            Text("You haven't signed up for any events yet.", style = MaterialTheme.typography.bodyLarge)
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(opportunities) { opportunity ->
+                Card(elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(text = opportunity.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(text = "Date: ${opportunity.date}", style = MaterialTheme.typography.bodyMedium)
+                        Text(text = "Location: ${opportunity.location}", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        }
+    }
+}

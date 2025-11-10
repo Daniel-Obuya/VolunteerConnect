@@ -1,13 +1,11 @@
-// In file: app/src/main/java/com/example/volunteerapp/model/Event.kt
-package com.example.volunteerapp.model
-
-import com.google.firebase.firestore.DocumentId
+package com.example.volunteerapp.model // Assuming the package name is 'models' as per previous code
 
 data class Event(
-    @DocumentId val id: String = "", // This annotation maps the document ID to this field
+    // var allows changing the ID later, val requires it to be final
+    var id: String = "",
     val title: String = "",
     val description: String = "",
     val date: String = "",
-    val time: String = "",
-    val location: String = ""
+    val location: String = "",
+    val totalVolunteers: Int = 0
 )
