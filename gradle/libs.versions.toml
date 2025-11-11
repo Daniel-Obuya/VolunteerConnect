@@ -1,4 +1,3 @@
-
 [versions]
 material3 = "1.3.0"
 appcompat = "1.7.0"
@@ -16,6 +15,7 @@ firebaseAuth = "24.0.1"
 credentials = "1.5.0"
 credentialsPlayServicesAuth = "1.5.0"
 googleid = "1.1.1"
+androidx-navigation = "2.7.7"
 
 googleGmsServices = "4.4.2" # Version for the google-services plugin
 firebaseBom = "33.1.2"      # Version for the Firebase Bill of Materials
@@ -52,6 +52,8 @@ firebase-storage = { group = "com.google.firebase", name = "firebase-storage" } 
 firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" } # No version needed
 
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "androidx-navigation" }
+
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -59,3 +61,4 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 # --- ADDED PLUGIN ---
 google-gms-google-services = { id = "com.google.gms.google-services", version.ref = "googleGmsServices" }
+

@@ -28,9 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.volunteerapp.R
 import com.google.firebase.auth.FirebaseAuth
-
-// Define the hardcoded admin email (REPLACE THIS WITH YOUR ACTUAL ADMIN EMAIL IN FIREBASE)
-private const val HARDCODED_ADMIN_EMAIL = "admin@volunteerconnect.com"
+import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun LoginScreen(
@@ -117,21 +115,33 @@ fun LoginScreen(
                     isLoading = true
                     message = ""
 
+                    val db = FirebaseFirestore.getInstance()
+
                     auth.signInWithEmailAndPassword(email, password)
                         .addOnSuccessListener { authResult ->
                             val user = authResult.user
                             if (user != null) {
-                                isLoading = false
-                                Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
+                                // --- THIS IS THE CORRECTED LOGIC ---
+                                // After successful login, fetch the user's document from Firestore.
+                                db.collection("users").document(user.uid).get()
+                                    .addOnSuccessListener { document ->
+                                        // Get the 'role' field from the document.
+                                        // If the role field doesn't exist, default to "Volunteer".
+                                        val role = document.getString("role") ?: "Volunteer"
 
-                                // *** ADMIN ROLE ASSIGNMENT LOGIC ADDED HERE ***
-                                val userRole = if (email.equals(HARDCODED_ADMIN_EMAIL, ignoreCase = true)) {
-                                    "Admin" // Assign 'Admin' role if email matches the hardcoded admin email
-                                } else {
-                                    "Volunteer" // Assign 'Volunteer' role otherwise
-                                }
+                                        isLoading = false
+                                        Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
 
-                                onLoginSuccess(user.uid, userRole)
+                                        // Pass the REAL role from Firestore to the navigation logic.
+                                        onLoginSuccess(user.uid, role)
+                                    }
+                                    .addOnFailureListener {
+                                        // If fetching the role fails for some reason (e.g., no network),
+                                        // log them in as a Volunteer to be safe and show a warning.
+                                        isLoading = false
+                                        Toast.makeText(context, "Could not verify role, logging in as Volunteer.", Toast.LENGTH_LONG).show()
+                                        onLoginSuccess(user.uid, "Volunteer")
+                                    }
                             } else {
                                 message = "Login failed: User not found."
                                 isLoading = false

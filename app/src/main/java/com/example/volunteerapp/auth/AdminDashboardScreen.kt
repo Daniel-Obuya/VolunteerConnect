@@ -4,15 +4,19 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 
+// Data class to hold opportunity information
 data class Opportunity(
     val id: String = "",
     val title: String = "",
@@ -23,19 +27,28 @@ data class Opportunity(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdminDashboardScreen(onLogout: () -> Unit) {
-    val db = FirebaseFirestore.getInstance()
+fun AdminDashboardScreen(
+    onAddOpportunityClicked: () -> Unit,
+    onLogout: () -> Unit
+) {
+    val db = Firebase.firestore
     var opportunities by remember { mutableStateOf<List<Opportunity>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
 
-    // Fetch all opportunities
+    // Fetch opportunities from Firestore when the screen is first composed
     LaunchedEffect(Unit) {
-        db.collection("opportunities").get()
-            .addOnSuccessListener { snapshot ->
-                opportunities = snapshot.toObjects(Opportunity::class.java)
-                isLoading = false
+        db.collection("opportunities")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    // Handle error, e.g., show a toast
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    val opportunityList = snapshot.documents.map { doc ->
+                        doc.toObject(Opportunity::class.java)!!.copy(id = doc.id)
+                    }
+                    opportunities = opportunityList
+                }
             }
-            .addOnFailureListener { isLoading = false }
     }
 
     Scaffold(
@@ -44,7 +57,7 @@ fun AdminDashboardScreen(onLogout: () -> Unit) {
                 title = { Text("Admin Dashboard") },
                 actions = {
                     IconButton(onClick = onLogout) {
-                        Icon(Icons.Default.ExitToApp, contentDescription = "Logout")
+                        Icon(Icons.Default.Logout, contentDescription = "Logout")
                     }
                 }
             )
@@ -52,44 +65,40 @@ fun AdminDashboardScreen(onLogout: () -> Unit) {
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 text = { Text("Add Opportunity") },
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                onClick = {
-                    // TODO: navigate to AddOpportunityScreen if you create it later
-                }
+                icon = { Icon(Icons.Default.Add, contentDescription = "Add") },
+                onClick = onAddOpportunityClicked
             )
         }
     ) { paddingValues ->
-        Column(
+        LazyColumn(
             modifier = Modifier
-                .padding(paddingValues)
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(paddingValues)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            if (isLoading) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else if (opportunities.isEmpty()) {
-                Text("No opportunities available.", style = MaterialTheme.typography.bodyLarge)
-            } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(opportunities) { opp ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(opp.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.height(4.dp))
-                                Text("Date: ${opp.date}")
-                                Text("Location: ${opp.location}")
-                                Spacer(Modifier.height(6.dp))
-                                Text(opp.description, style = MaterialTheme.typography.bodyMedium)
-                            }
-                        }
-                    }
-                }
+            items(opportunities) { opportunity ->
+                OpportunityCard(opportunity = opportunity)
             }
+        }
+    }
+}
+
+@Composable
+fun OpportunityCard(opportunity: Opportunity) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(text = opportunity.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = opportunity.description, style = MaterialTheme.typography.bodyMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = "Date: ${opportunity.date}", style = MaterialTheme.typography.bodySmall)
+            Text(text = "Location: ${opportunity.location}", style = MaterialTheme.typography.bodySmall)
         }
     }
 }

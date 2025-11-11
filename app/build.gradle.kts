@@ -1,3 +1,5 @@
+
+
 plugins {
     // Use the alias syntax consistently for all plugins
     alias(libs.plugins.android.application)
@@ -80,6 +82,9 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.firebase.storage)
+
+    implementation(libs.androidx.navigation.compose)
+
 
     // Other libraries (Existing)
     implementation(libs.androidx.credentials)
