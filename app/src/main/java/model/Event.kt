@@ -5,5 +5,6 @@ data class Event(
     var title: String = "",
     var description: String = "",
     var date: String = "",
+    var time: String = "",
     var location: String = ""
 )
