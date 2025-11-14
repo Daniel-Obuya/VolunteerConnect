@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -21,9 +20,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.volunteerapp.admin.AddEditEventActivity
 import com.example.volunteerapp.auth.AdminDashboardScreen
-import com.example.volunteerapp.opportunities.OpportunitiesScreen
 import com.example.volunteerapp.auth.LoginScreen
-import com.example.volunteerapp.auth.ProfileScreen
 import com.example.volunteerapp.auth.RegisterScreen
 import com.example.volunteerapp.navigation.AuthState
 import com.example.volunteerapp.navigation.NavigationViewModel
@@ -31,9 +28,6 @@ import com.example.volunteerapp.ui.theme.VolunteerAppTheme
 import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : ComponentActivity() {
-
-    // Removed the direct viewModel instance here, we will get it in the Composable
-    // private val navigationViewModel: NavigationViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,12 +37,12 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // Pass the ViewModel down from the top level
                     val navigationViewModel: NavigationViewModel = viewModel()
                     val authState by navigationViewModel.authState
+
                     AppNavigation(
                         authState = authState,
-                        navigationViewModel = navigationViewModel // Pass the ViewModel instance
+                        navigationViewModel = navigationViewModel
                     )
                 }
             }
@@ -59,7 +53,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppNavigation(
     authState: AuthState,
-    navigationViewModel: NavigationViewModel // Receive the ViewModel as a parameter
+    navigationViewModel: NavigationViewModel
 ) {
     val navController = rememberNavController()
 
@@ -67,7 +61,7 @@ fun AppNavigation(
         AuthState.LOADING -> "loading"
         AuthState.UNAUTHENTICATED -> "login"
         AuthState.AUTHENTICATED_ADMIN -> "adminDashboard"
-        AuthState.AUTHENTICATED_VOLUNTEER -> "profile"
+        AuthState.AUTHENTICATED_VOLUNTEER -> "volunteerNav"
     }
 
     if (authState == AuthState.LOADING) {
@@ -88,10 +82,7 @@ fun AppNavigation(
         composable("login") {
             LoginScreen(
                 onNavigateToRegister = { navController.navigate("register") },
-                // --- THIS IS THE FIX ---
                 onLoginSuccess = { _, _ ->
-                    // After a successful login, tell the ViewModel to re-check the auth state.
-                    // This will trigger the state change and automatically navigate to the correct screen.
                     navigationViewModel.checkAuthState()
                 }
             )
@@ -115,35 +106,19 @@ fun AppNavigation(
                 },
                 onLogout = {
                     FirebaseAuth.getInstance().signOut()
-                    // Also explicitly tell the ViewModel to update its state
                     navigationViewModel.checkAuthState()
                 }
             )
         }
 
-        composable("profile") {
-            val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
-            ProfileScreen(
-                userId = userId,
-                onLogout = {
-                    FirebaseAuth.getInstance().signOut()
-                    // Also explicitly tell the ViewModel to update its state
-                    navigationViewModel.checkAuthState()
-                },
-                onNavigateToOpportunities = {
-                    navController.navigate("allOpportunities")
-                }
-            )
-        }
-
-        composable("allOpportunities") {
-            val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
-            OpportunitiesScreen(
-                userId = userId,
-                onNavigateToProfile = {
-                    navController.popBackStack()
-                }
-            )
+        // 🆕 Unified Volunteer navigation host
+        composable("volunteerNav") {
+            VolunteerNavHost()
         }
     }
+}
+
+@Composable
+fun VolunteerNavHost() {
+    TODO("Not yet implemented")
 }

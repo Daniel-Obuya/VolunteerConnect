@@ -1,5 +1,3 @@
-// In file: app/src/main/java/com/example/volunteerapp/opportunities/OpportunitiesScreen.kt
-
 package com.example.volunteerapp.opportunities
 
 import android.widget.Toast
@@ -7,11 +5,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle // <-- Use a profile icon
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -24,7 +20,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 @Composable
 fun OpportunitiesScreen(
     userId: String,
-    onNavigateToProfile: () -> Unit // <-- CHANGED: More descriptive name
+    onNavigateToProfile: () -> Unit
 ) {
     val db = FirebaseFirestore.getInstance()
     var events by remember { mutableStateOf<List<Event>>(emptyList()) }
@@ -50,51 +46,55 @@ fun OpportunitiesScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Volunteer Opportunities") },
-                // --- THIS IS THE KEY CHANGE ---
                 actions = {
-                    IconButton(onClick = onNavigateToProfile) { // Use the new navigation lambda
+                    IconButton(onClick = onNavigateToProfile) {
                         Icon(
                             imageVector = Icons.Default.AccountCircle,
-                            contentDescription = "Go to Profile",
-                            modifier = Modifier.size(28.dp) // Make icon a bit larger
+                            contentDescription = "Go to My Events",
+                            modifier = Modifier.size(28.dp)
                         )
                     }
                 }
             )
         }
     ) { padding ->
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+        when {
+            isLoading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
             }
-        } else if (events.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No volunteer events available.")
+
+            events.isEmpty() -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No volunteer events available.")
+                }
             }
-        } else {
-            LazyColumn(
-                contentPadding = padding,
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(events) { event ->
-                    EventItem(event = event, userId = userId)
+
+            else -> {
+                LazyColumn(
+                    contentPadding = padding,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(events) { event ->
+                        EventItem(event = event, userId = userId)
+                    }
                 }
             }
         }
     }
 }
 
-// The EventItem composable remains the same as before
 @Composable
 fun EventItem(event: Event, userId: String) {
     val db = FirebaseFirestore.getInstance()
@@ -103,6 +103,7 @@ fun EventItem(event: Event, userId: String) {
     var isRegistering by remember { mutableStateOf(false) }
     var registrationChecked by remember { mutableStateOf(false) }
 
+    // Check if user is already registered for the event
     LaunchedEffect(event.id, userId) {
         val signupRef = db.collection("events").document(event.id)
             .collection("signups").document(userId)
@@ -129,6 +130,11 @@ fun EventItem(event: Event, userId: String) {
 
             Button(
                 onClick = {
+                    if (isRegistered) {
+                        Toast.makeText(context, "You are already registered!", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+
                     isRegistering = true
                     val signupRef = db.collection("events").document(event.id)
                         .collection("signups").document(userId)
@@ -136,6 +142,7 @@ fun EventItem(event: Event, userId: String) {
                         "userId" to userId,
                         "signupTime" to FieldValue.serverTimestamp()
                     )
+
                     signupRef.set(signupData)
                         .addOnSuccessListener {
                             Toast.makeText(context, "Successfully registered!", Toast.LENGTH_SHORT).show()
@@ -147,16 +154,14 @@ fun EventItem(event: Event, userId: String) {
                             isRegistering = false
                         }
                 },
-                enabled = !isRegistered && !isRegistering && registrationChecked
+                enabled = !isRegistering && registrationChecked
             ) {
                 when {
-                    isRegistering -> {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.dp
-                        )
-                    }
+                    isRegistering -> CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp
+                    )
                     isRegistered -> Text("Registered")
                     !registrationChecked -> Text("Checking...")
                     else -> Text("Register")
