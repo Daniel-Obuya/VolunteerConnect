@@ -20,11 +20,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.volunteerapp.admin.AddEditEventActivity
 import com.example.volunteerapp.auth.AdminDashboardScreen
+import com.example.volunteerapp.opportunities.OpportunitiesScreen
 import com.example.volunteerapp.auth.LoginScreen
+import com.example.volunteerapp.auth.ProfileScreen
 import com.example.volunteerapp.auth.RegisterScreen
 import com.example.volunteerapp.navigation.AuthState
 import com.example.volunteerapp.navigation.NavigationViewModel
 import com.example.volunteerapp.ui.theme.VolunteerAppTheme
+import com.example.volunteerapp.opportunities.RegisteredOpportunitiesScreen
 import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : ComponentActivity() {
@@ -61,7 +64,7 @@ fun AppNavigation(
         AuthState.LOADING -> "loading"
         AuthState.UNAUTHENTICATED -> "login"
         AuthState.AUTHENTICATED_ADMIN -> "adminDashboard"
-        AuthState.AUTHENTICATED_VOLUNTEER -> "volunteerNav"
+        AuthState.AUTHENTICATED_VOLUNTEER -> "profile"
     }
 
     if (authState == AuthState.LOADING) {
@@ -82,16 +85,16 @@ fun AppNavigation(
         composable("login") {
             LoginScreen(
                 onNavigateToRegister = { navController.navigate("register") },
-                onLoginSuccess = { _, _ ->
-                    navigationViewModel.checkAuthState()
-                }
+                onLoginSuccess = { _, _ -> navigationViewModel.checkAuthState() }
             )
         }
 
         composable("register") {
             RegisterScreen(
                 onRegisterSuccess = {
-                    navController.navigate("login") { popUpTo("register") { inclusive = true } }
+                    navController.navigate("login") {
+                        popUpTo("register") { inclusive = true }
+                    }
                 },
                 onNavigateToLogin = { navController.navigate("login") }
             )
@@ -101,8 +104,7 @@ fun AppNavigation(
             val context = LocalContext.current
             AdminDashboardScreen(
                 onAddOpportunityClicked = {
-                    val intent = Intent(context, AddEditEventActivity::class.java)
-                    context.startActivity(intent)
+                    context.startActivity(Intent(context, AddEditEventActivity::class.java))
                 },
                 onLogout = {
                     FirebaseAuth.getInstance().signOut()
@@ -111,14 +113,39 @@ fun AppNavigation(
             )
         }
 
-        // 🆕 Unified Volunteer navigation host
-        composable("volunteerNav") {
-            VolunteerNavHost()
+        // ✔ PROFILE SCREEN
+        composable("profile") {
+            val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+
+            ProfileScreen(
+                userId = userId,
+                onLogout = {
+                    FirebaseAuth.getInstance().signOut()
+                    navigationViewModel.checkAuthState()
+                },
+                onNavigateToOpportunities = {
+                    navController.navigate("opportunities")
+                }
+            )
+        }
+
+        // ✔ OPPORTUNITIES SCREEN (fixed params)
+        composable("opportunities") {
+            val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+
+            OpportunitiesScreen(
+                userId = userId,
+                onNavigateToProfile = { navController.navigate("profile") }
+            )
+        }
+
+
+        // ✔ REGISTERED OPPORTUNITIES — already correct
+        composable("registeredOpportunities") {
+            RegisteredOpportunitiesScreen(
+                onBackToProfile = { navController.navigate("profile") }
+            )
         }
     }
 }
 
-@Composable
-fun VolunteerNavHost() {
-    TODO("Not yet implemented")
-}

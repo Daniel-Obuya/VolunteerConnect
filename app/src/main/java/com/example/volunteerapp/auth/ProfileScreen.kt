@@ -2,8 +2,6 @@ package com.example.volunteerapp.auth
 
 import android.net.Uri
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -14,8 +12,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,18 +20,17 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.volunteerapp.R
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 
-// A simple data class for holding opportunity details
+// Data class for holding opportunity details
 data class VolunteerOpportunity(
     val id: String = "",
     val title: String = "",
-    val date: String = "", // Keep it simple for now
+    val date: String = "",
     val location: String = ""
 )
 
@@ -44,49 +39,70 @@ data class VolunteerOpportunity(
 fun ProfileScreen(
     userId: String,
     onLogout: () -> Unit,
-    onNavigateToOpportunities: () -> Unit // Navigation callback
+    onNavigateToOpportunities: () -> Unit
 ) {
     val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
 
-    // --- State Management ---
     var userName by remember { mutableStateOf("Loading...") }
     var userEmail by remember { mutableStateOf("Loading...") }
     var userPhotoUrl by remember { mutableStateOf<String?>(null) }
     var registeredOpportunities by remember { mutableStateOf<List<VolunteerOpportunity>>(emptyList()) }
     var isLoadingEvents by remember { mutableStateOf(true) }
 
-    // --- Tab State ---
     var selectedTabIndex by remember { mutableStateOf(0) }
     val tabs = listOf("My Details", "My Events")
 
-    // --- Data Fetching ---
+    // --- Fetch user details and registered events ---
     LaunchedEffect(userId) {
-        // Fetch User Details
+        // Fetch user details
         db.collection("users").document(userId).get()
-            .addOnSuccessListener { document ->
-                if (document != null && document.exists()) {
-                    userName = document.getString("name") ?: "No Name"
-                    userEmail = document.getString("email") ?: "No Email"
-                    userPhotoUrl = document.getString("photoUrl")
+            .addOnSuccessListener { doc ->
+                if (doc.exists()) {
+                    userName = doc.getString("name") ?: "No Name"
+                    userEmail = doc.getString("email") ?: "No Email"
+                    userPhotoUrl = doc.getString("photoUrl")
                 }
             }
 
-        // Fetch Registered Opportunities
+        // Fetch registered opportunities
         isLoadingEvents = true
-        db.collectionGroup("signups").whereEqualTo("userId", userId).get()
+        db.collection("users")
+            .document(userId)
+            .collection("registeredOpportunities")
+            .get()
             .addOnSuccessListener { snapshot ->
-                val opportunityIds = snapshot.documents.map { it.reference.parent.parent?.id }
-                if (opportunityIds.isNotEmpty()) {
-                    db.collection("opportunities").whereIn("id", opportunityIds).get()
-                        .addOnSuccessListener { opportunityDocs ->
-                            registeredOpportunities = opportunityDocs.toObjects(VolunteerOpportunity::class.java)
-                            isLoadingEvents = false
-                        }.addOnFailureListener { isLoadingEvents = false }
+                val eventIds = snapshot.documents.mapNotNull { it.getString("eventId") }
+
+                if (eventIds.isNotEmpty()) {
+                    val events = mutableListOf<VolunteerOpportunity>()
+                    var remaining = eventIds.size
+
+                    for (eventId in eventIds) {
+                        db.collection("opportunities").document(eventId).get()
+                            .addOnSuccessListener { eventDoc ->
+                                eventDoc.toObject(VolunteerOpportunity::class.java)?.let {
+                                    events.add(it.copy(id = eventDoc.id))
+                                }
+                            }
+                            .addOnCompleteListener {
+                                remaining--
+                                if (remaining == 0) {
+                                    registeredOpportunities = events
+                                    isLoadingEvents = false
+                                }
+                            }
+                    }
                 } else {
+                    registeredOpportunities = emptyList()
                     isLoadingEvents = false
                 }
-            }.addOnFailureListener { isLoadingEvents = false }
+            }
+            .addOnFailureListener {
+                registeredOpportunities = emptyList()
+                isLoadingEvents = false
+                Toast.makeText(context, "Failed to load events", Toast.LENGTH_SHORT).show()
+            }
     }
 
     Scaffold(
@@ -107,12 +123,12 @@ fun ProfileScreen(
             ExtendedFloatingActionButton(
                 text = { Text("Find Opportunities") },
                 icon = { Icon(Icons.Default.Search, contentDescription = null) },
-                onClick = onNavigateToOpportunities // Navigate to the main list
+                onClick = onNavigateToOpportunities
             )
         }
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
-            // --- Tab Layout ---
+            // Tabs
             PrimaryTabRow(selectedTabIndex = selectedTabIndex) {
                 tabs.forEachIndexed { index, title ->
                     Tab(
@@ -123,7 +139,7 @@ fun ProfileScreen(
                 }
             }
 
-            // --- Content based on selected tab ---
+            // Tab content
             when (selectedTabIndex) {
                 0 -> MyDetailsTab(userId, userName, userEmail, userPhotoUrl)
                 1 -> MyEventsTab(registeredOpportunities, isLoadingEvents)
@@ -133,26 +149,18 @@ fun ProfileScreen(
 }
 
 @Composable
-fun MyDetailsTab(
-    userId: String,
-    initialName: String,
-    email: String,
-    photoUrl: String?
-) {
+fun MyDetailsTab(userId: String, name: String, email: String, photoUrl: String?) {
     val context = LocalContext.current
     val db = FirebaseFirestore.getInstance()
     val storage = FirebaseStorage.getInstance()
 
-    // Edit mode states
     var isEditMode by remember { mutableStateOf(false) }
-    var editableName by remember(initialName) { mutableStateOf(initialName) }
+    var editableName by remember(name) { mutableStateOf(name) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var isSaving by remember { mutableStateOf(false) }
 
-    // Derived states for display
-    val currentName by remember(initialName, editableName, isEditMode) { derivedStateOf { if (isEditMode) editableName else initialName } }
+    val currentName by remember(editableName, isEditMode) { derivedStateOf { if (isEditMode) editableName else name } }
     val currentPhoto by remember(photoUrl, selectedImageUri) { derivedStateOf { selectedImageUri ?: photoUrl } }
-
 
     Column(
         modifier = Modifier
@@ -165,7 +173,6 @@ fun MyDetailsTab(
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // --- Profile Picture Section ---
         Box(contentAlignment = Alignment.BottomEnd) {
             AsyncImage(
                 model = currentPhoto ?: R.drawable.vconnect_logo,
@@ -174,9 +181,7 @@ fun MyDetailsTab(
                     .size(150.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .clickable(enabled = isEditMode) {
-                        // Image picker logic here
-                    },
+                    .clickable(enabled = isEditMode) { },
                 contentScale = ContentScale.Crop
             )
             if (isEditMode) {
@@ -194,7 +199,6 @@ fun MyDetailsTab(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // --- User Details Section ---
         if (isEditMode) {
             OutlinedTextField(
                 value = editableName,
@@ -203,23 +207,19 @@ fun MyDetailsTab(
                 modifier = Modifier.fillMaxWidth()
             )
         } else {
-            Text(text = currentName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(currentName, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = email, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(email, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
-        Spacer(modifier = Modifier.weight(1f)) // Pushes button to bottom
+        Spacer(modifier = Modifier.weight(1f))
 
-        // --- Edit/Save Button ---
         Button(
             onClick = {
                 if (isEditMode) {
-                    // Save logic
                     isSaving = true
-                    // (Add the full save logic from the previous answer here)
                     Toast.makeText(context, "Saving...", Toast.LENGTH_SHORT).show()
-                    // Simulate save and exit edit mode
                     isSaving = false
                     isEditMode = false
                 } else {
@@ -240,7 +240,9 @@ fun MyEventsTab(opportunities: List<VolunteerOpportunity>, isLoading: Boolean) {
             CircularProgressIndicator()
         }
     } else if (opportunities.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp), contentAlignment = Alignment.Center) {
             Text("You haven't signed up for any events yet.", style = MaterialTheme.typography.bodyLarge)
         }
     } else {
@@ -252,10 +254,10 @@ fun MyEventsTab(opportunities: List<VolunteerOpportunity>, isLoading: Boolean) {
             items(opportunities) { opportunity ->
                 Card(elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(text = opportunity.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(opportunity.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(text = "Date: ${opportunity.date}", style = MaterialTheme.typography.bodyMedium)
-                        Text(text = "Location: ${opportunity.location}", style = MaterialTheme.typography.bodyMedium)
+                        Text("Date: ${opportunity.date}", style = MaterialTheme.typography.bodyMedium)
+                        Text("Location: ${opportunity.location}", style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
