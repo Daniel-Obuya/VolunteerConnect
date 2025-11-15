@@ -30,6 +30,9 @@ import com.example.volunteerapp.ui.theme.VolunteerAppTheme
 import com.example.volunteerapp.opportunities.RegisteredOpportunitiesScreen
 import com.google.firebase.auth.FirebaseAuth
 
+
+//COMMIT
+
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {

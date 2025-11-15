@@ -26,7 +26,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 
-// Data class for holding opportunity details
+// Data class for holding opportunity detailsss
 data class VolunteerOpportunity(
     val id: String = "",
     val title: String = "",
