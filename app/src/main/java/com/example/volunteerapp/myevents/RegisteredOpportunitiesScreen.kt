@@ -5,14 +5,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.volunteerapp.models.Event
+import com.example.volunteerapp.model.Event
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-
-//commit
 
 @Composable
 fun RegisteredOpportunitiesScreen(
@@ -20,49 +19,58 @@ fun RegisteredOpportunitiesScreen(
 ) {
     val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
     val db = FirebaseFirestore.getInstance()
-    val registeredEvents = remember { mutableStateListOf<Event>() }
+    var registeredEvents by remember { mutableStateOf<List<Event>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
 
-    LaunchedEffect(Unit) {
-        db.collection("users")
-            .document(userId)
-            .collection("registeredOpportunities")
-            .addSnapshotListener { snapshot, _ ->
-                registeredEvents.clear()
-                snapshot?.documents?.forEach { signupDoc ->
-                    val eventId = signupDoc.getString("eventId")
-                    if (eventId != null) {
-                        db.collection("opportunities")
-                            .document(eventId)
-                            .get()
-                            .addOnSuccessListener { eventDoc ->
-                                val event = eventDoc.toObject(Event::class.java)
-                                event?.id = eventDoc.id
-                                event?.let { registeredEvents.add(it) }
-                            }
-                    }
+    // Fetch all events where the current user has signed up
+    LaunchedEffect(userId) {
+        if (userId.isBlank()) return@LaunchedEffect
+
+        db.collection("opportunities")
+            .whereArrayContains("signups", userId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    registeredEvents = emptyList()
+                    isLoading = false
+                    return@addSnapshotListener
                 }
+
+                registeredEvents = snapshot?.toObjects(Event::class.java) ?: emptyList()
+                isLoading = false
             }
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    Column(modifier = Modifier
+        .fillMaxSize()
+        .padding(16.dp)
+    ) {
         Text("Registered Opportunities", fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(12.dp))
 
-        LazyColumn {
-            items(registeredEvents) { event ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(event.title, fontWeight = FontWeight.Bold)
-                        Text(event.description)
-                        Text("Date: ${event.date}")
-                        Text("Location: ${event.location}")
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (registeredEvents.isEmpty()) {
+            Text("You haven't registered for any events yet.")
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(registeredEvents) { event ->
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(event.title, fontWeight = FontWeight.Bold)
+                            Text(event.description)
+                            Text("Date: ${event.date}")
+                            Text("Location: ${event.location}")
+                            Text("Time: ${event.time}")
+                        }
                     }
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = onBackToProfile) {
+        Button(onClick = onBackToProfile, modifier = Modifier.fillMaxWidth()) {
             Text("Back to Profile")
         }
     }

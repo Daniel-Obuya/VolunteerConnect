@@ -92,6 +92,7 @@ dependencies {
     implementation(libs.googleid)
     implementation(libs.androidx.material3.icons.extended)
     implementation(libs.coil.compose)
+    implementation(libs.ui)
 
     // Test Dependencies (Existing)
     testImplementation(libs.junit)

@@ -11,12 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.volunteerapp.models.Event
-import com.google.firebase.auth.FirebaseAuth
+import com.example.volunteerapp.model.Event
 import com.google.firebase.firestore.FirebaseFirestore
-
-
-//commit
 
 @Composable
 fun OpportunitiesScreen(
@@ -28,9 +24,9 @@ fun OpportunitiesScreen(
     val db = FirebaseFirestore.getInstance()
     val eventList = remember { mutableStateListOf<Event>() }
     var loadingEvents by remember { mutableStateOf(true) }
-    var registeringEventId by remember { mutableStateOf<String?>(null) } // Currently registering
+    var registeringEventId by remember { mutableStateOf<String?>(null) }
 
-    // Fetch events
+    // Fetch all available opportunities
     LaunchedEffect(Unit) {
         db.collection("opportunities")
             .addSnapshotListener { snapshot, error ->
@@ -39,6 +35,7 @@ fun OpportunitiesScreen(
                     loadingEvents = false
                     return@addSnapshotListener
                 }
+
                 eventList.clear()
                 snapshot?.documents?.forEach { doc ->
                     val event = doc.toObject(Event::class.java)
@@ -66,7 +63,6 @@ fun OpportunitiesScreen(
                             Text(event.description)
                             Text("Date: ${event.date}")
                             Text("Location: ${event.location}")
-
                             Spacer(modifier = Modifier.height(8.dp))
 
                             val isRegistering = registeringEventId == event.id
@@ -83,12 +79,12 @@ fun OpportunitiesScreen(
                                         "timestamp" to System.currentTimeMillis()
                                     )
 
+                                    // ✅ Write only to user's subcollection
                                     val userRef = db.collection("users")
                                         .document(userId)
                                         .collection("registeredOpportunities")
                                         .document(event.id)
 
-                                    // Check if already registered
                                     userRef.get().addOnSuccessListener { document ->
                                         if (document.exists()) {
                                             Toast.makeText(context, "Already registered for this event", Toast.LENGTH_SHORT).show()
