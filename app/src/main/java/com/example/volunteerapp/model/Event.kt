@@ -1,11 +1,14 @@
-package com.example.volunteerapp.model // Assuming the package name is 'models' as per previous code
+package com.example.volunteerapp.model
 
+// This data class defines the structure for an Event across your entire app
 data class Event(
-    // var allows changing the ID later, val requires it to be final
     var id: String = "",
     val title: String = "",
     val description: String = "",
     val date: String = "",
     val location: String = "",
-    val totalVolunteers: Int = 0
+    val time: String = "" ,
+    val totalVolunteers: Int? = null,
+    val signups: List<String> = emptyList(),
+    val status: String = "Active"  // New: Status of the event
 )
